@@ -1,11 +1,13 @@
 import { Request, Response } from 'express';
 import Transaction, { ITransaction, TransactionType, PaymentMethod, TransactionStatus } from '../models/Transaction';
 import Account from '../models/Account';
+import { getUserId, getUserObjectId } from '../middleware/auth';
 import mongoose from 'mongoose';
 
-// GET /api/transactions - Get all transactions with filters
+// GET /api/transactions - Get all transactions with filters for current user
 export const getAllTransactions = async (req: Request, res: Response) => {
   try {
+    const userId = getUserId(req);
     const {
       accountId,
       startDate,
@@ -16,10 +18,21 @@ export const getAllTransactions = async (req: Request, res: Response) => {
       page = 1
     } = req.query;
 
-    // Build filter object
-    const filter: any = { isActive: true };
+    // Build filter object - ALWAYS include userId
+    const filter: any = { userId, isActive: true };
     
-    if (accountId) filter.accountId = accountId;
+    if (accountId) {
+      // Verify account belongs to user before filtering
+      const account = await Account.findOne({ _id: accountId, userId });
+      if (!account) {
+        return res.status(404).json({
+          success: false,
+          message: 'Account not found'
+        });
+      }
+      filter.accountId = accountId;
+    }
+    
     if (type) filter.type = type;
     if (categoryId) filter.categoryId = categoryId;
     
@@ -60,12 +73,13 @@ export const getAllTransactions = async (req: Request, res: Response) => {
   }
 };
 
-// GET /api/transactions/:id - Get transaction by ID
+// GET /api/transactions/:id - Get transaction by ID (only if belongs to user)
 export const getTransactionById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const userId = getUserId(req);
     
-    const transaction = await Transaction.findById(id)
+    const transaction = await Transaction.findOne({ _id: id, userId })
       .populate('accountId', 'name type')
       .populate('transferToAccountId', 'name type')
       .populate('categoryId', 'name color');
@@ -91,9 +105,10 @@ export const getTransactionById = async (req: Request, res: Response) => {
   }
 };
 
-// POST /api/transactions - Create new transaction
+// POST /api/transactions - Create new transaction for current user
 export const createTransaction = async (req: Request, res: Response) => {
   try {
+    const userId = getUserObjectId(req);
     const {
       description,
       amount,
@@ -120,16 +135,16 @@ export const createTransaction = async (req: Request, res: Response) => {
       });
     }
 
-    // Validate account exists
-    const account = await Account.findById(accountId);
+    // Validate account exists and belongs to user
+    const account = await Account.findOne({ _id: accountId, userId });
     if (!account) {
       return res.status(404).json({
         success: false,
-        message: 'Account not found'
+        message: 'Account not found or access denied'
       });
     }
 
-    // Validate transfer account if provided
+    // Validate transfer account if provided (must also belong to user)
     if (type === TransactionType.TRANSFER) {
       if (!transferToAccountId) {
         return res.status(400).json({
@@ -138,11 +153,11 @@ export const createTransaction = async (req: Request, res: Response) => {
         });
       }
       
-      const transferAccount = await Account.findById(transferToAccountId);
+      const transferAccount = await Account.findOne({ _id: transferToAccountId, userId });
       if (!transferAccount) {
         return res.status(404).json({
           success: false,
-          message: 'Transfer target account not found'
+          message: 'Transfer target account not found or access denied'
         });
       }
     }
@@ -164,6 +179,7 @@ export const createTransaction = async (req: Request, res: Response) => {
 
     // Create transaction data
     const transactionData: Partial<ITransaction> = {
+      userId,  // Always assign to current user
       description,
       amount: Number(amount),
       type,
@@ -212,20 +228,22 @@ export const createTransaction = async (req: Request, res: Response) => {
   }
 };
 
-// PUT /api/transactions/:id - Update transaction
+// PUT /api/transactions/:id - Update transaction (only if belongs to user)
 export const updateTransaction = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const userId = getUserId(req);
     const updates = req.body;
 
     // Remove fields that shouldn't be updated directly
     delete updates._id;
+    delete updates.userId;  // Prevent changing ownership
     delete updates.createdAt;
     delete updates.updatedAt;
     delete updates.accountId; // Prevent changing account after creation
 
-    const transaction = await Transaction.findByIdAndUpdate(
-      id,
+    const transaction = await Transaction.findOneAndUpdate(
+      { _id: id, userId },  // Only update if belongs to user
       updates,
       { new: true, runValidators: true }
     ).populate('accountId', 'name type')
@@ -253,12 +271,13 @@ export const updateTransaction = async (req: Request, res: Response) => {
   }
 };
 
-// DELETE /api/transactions/:id - Soft delete transaction
+// DELETE /api/transactions/:id - Soft delete transaction (only if belongs to user)
 export const deleteTransaction = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const userId = getUserId(req);
     
-    const transaction = await Transaction.findById(id);
+    const transaction = await Transaction.findOne({ _id: id, userId });
     if (!transaction) {
       return res.status(404).json({
         success: false,
@@ -283,14 +302,15 @@ export const deleteTransaction = async (req: Request, res: Response) => {
   }
 };
 
-// GET /api/transactions/account/:accountId - Get transactions for specific account
+// GET /api/transactions/account/:accountId - Get transactions for specific account (if belongs to user)
 export const getTransactionsByAccount = async (req: Request, res: Response) => {
   try {
     const { accountId } = req.params;
+    const userId = getUserId(req);
     const { limit = 20, page = 1 } = req.query;
 
-    // Validate account exists
-    const account = await Account.findById(accountId);
+    // Validate account exists and belongs to user
+    const account = await Account.findOne({ _id: accountId, userId });
     if (!account) {
       return res.status(404).json({
         success: false,
@@ -300,12 +320,12 @@ export const getTransactionsByAccount = async (req: Request, res: Response) => {
 
     const skip = (Number(page) - 1) * Number(limit);
     
-    const transactions = await Transaction.find({ accountId, isActive: true })
+    const transactions = await Transaction.find({ accountId, userId, isActive: true })
       .sort({ transactionDate: -1 })
       .limit(Number(limit))
       .skip(skip);
 
-    const total = await Transaction.countDocuments({ accountId, isActive: true });
+    const total = await Transaction.countDocuments({ accountId, userId, isActive: true });
 
     res.status(200).json({
       success: true,
@@ -331,10 +351,11 @@ export const getTransactionsByAccount = async (req: Request, res: Response) => {
   }
 };
 
-// GET /api/transactions/monthly/:year/:month - Get monthly transactions
+// GET /api/transactions/monthly/:year/:month - Get monthly transactions for current user
 export const getMonthlyTransactions = async (req: Request, res: Response) => {
   try {
     const { year, month } = req.params;
+    const userId = getUserId(req);
     
     const yearNum = parseInt(year);
     const monthNum = parseInt(month);
@@ -346,7 +367,14 @@ export const getMonthlyTransactions = async (req: Request, res: Response) => {
       });
     }
 
-    const transactions = await Transaction.getMonthlyExpenses(yearNum, monthNum);
+    const startDate = new Date(yearNum, monthNum - 1, 1);
+    const endDate = new Date(yearNum, monthNum, 0, 23, 59, 59);
+    
+    const transactions = await Transaction.find({
+      userId,
+      transactionDate: { $gte: startDate, $lte: endDate },
+      isActive: true
+    }).sort({ transactionDate: -1 });
     
     // Calculate summary
     const summary = {
@@ -379,10 +407,12 @@ export const getMonthlyTransactions = async (req: Request, res: Response) => {
   }
 };
 
-// GET /api/transactions/recurring - Get recurring transactions
+// GET /api/transactions/recurring - Get recurring transactions for current user
 export const getRecurringTransactions = async (req: Request, res: Response) => {
   try {
-    const transactions = await Transaction.getRecurring();
+    const userId = getUserId(req);
+    
+    const transactions = await Transaction.find({ userId, isRecurring: true, isActive: true });
     
     res.status(200).json({
       success: true,
@@ -399,9 +429,10 @@ export const getRecurringTransactions = async (req: Request, res: Response) => {
   }
 };
 
-// POST /api/transactions/bulk - Create multiple transactions (useful for imports)
+// POST /api/transactions/bulk - Create multiple transactions for current user
 export const createBulkTransactions = async (req: Request, res: Response) => {
   try {
+    const userId = getUserObjectId(req);
     const { transactions } = req.body;
     
     if (!Array.isArray(transactions) || transactions.length === 0) {
@@ -425,6 +456,9 @@ export const createBulkTransactions = async (req: Request, res: Response) => {
 
     for (const [index, transactionData] of transactions.entries()) {
       try {
+        // Always assign to current user
+        transactionData.userId = userId;
+        
         const transaction = new Transaction(transactionData);
         await transaction.save();
         await transaction.applyToAccount();
@@ -453,14 +487,25 @@ export const createBulkTransactions = async (req: Request, res: Response) => {
   }
 };
 
-// GET /api/transactions/summary - Get transaction summary/statistics
+// GET /api/transactions/summary - Get transaction summary/statistics for current user
 export const getTransactionSummary = async (req: Request, res: Response) => {
   try {
+    const userId = getUserObjectId(req);
     const { startDate, endDate, accountId } = req.query;
     
-    const match: any = { isActive: true };
+    const match: any = { userId, isActive: true };
     
-    if (accountId) match.accountId = new mongoose.Types.ObjectId(accountId as string);
+    if (accountId) {
+      // Verify account belongs to user
+      const account = await Account.findOne({ _id: accountId, userId });
+      if (!account) {
+        return res.status(404).json({
+          success: false,
+          message: 'Account not found'
+        });
+      }
+      match.accountId = new mongoose.Types.ObjectId(accountId as string);
+    }
     
     if (startDate || endDate) {
       match.transactionDate = {};

@@ -11,8 +11,11 @@ import {
   createBulkTransactions,
   getTransactionSummary
 } from '../controllers/transactionController';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
+
+router.use(requireAuth);
 
 // IMPORTANT: Specific routes MUST come before generic /:id routes!
 
