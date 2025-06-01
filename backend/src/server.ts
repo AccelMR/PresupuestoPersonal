@@ -6,6 +6,9 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 
 import accountRoutes from './routes/accounts';
+import transactionRoutes from './routes/transactions';
+import authRoutes from './routes/auths';
+// import categoryRoutes from './routes/categories'; // Si se implementa más adelante
 
 // Cargar variables de entorno
 dotenv.config();
@@ -83,7 +86,8 @@ app.get('/api/test-db', async (req, res) => {
 
 // TODO: Agregar rutas de la API
 app.use('/api/accounts', accountRoutes);
-// app.use('/api/transactions', transactionRoutes);
+app.use('/api/transactions', transactionRoutes);
+app.use('/api/auth', authRoutes);
 // app.use('/api/categories', categoryRoutes);
 
 // Manejo de errores 404

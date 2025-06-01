@@ -1,4 +1,5 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema, Model } from 'mongoose';
+import { IUser } from './User';
 
 // Account types
 export enum AccountType {
@@ -12,8 +13,11 @@ export enum AccountType {
   INVESTMENT = 'investment'        // Investments
 }
 
-// TypeScript interface
+// TypeScript interface - FIXED: Added instance methods
 export interface IAccount extends Document {
+  userId: mongoose.Types.ObjectId | IUser;
+
+
   name: string;
   type: AccountType;
   initialBalance: number;
@@ -46,17 +50,40 @@ export interface IAccount extends Document {
   
   createdAt: Date;
   updatedAt: Date;
+
+  // FIXED: Declare instance methods here
+  updateBalance(amount: number): Promise<IAccount>;
+  setBalance(newBalance: number): Promise<IAccount>;
+  calculateCreditDates(): void;
+  getCreditStatus(): any | null;
+  
+  // Virtual properties
+  balanceDifference: number;
+  creditUsed: number;
+  utilizationPercentage: number;
+  daysUntilPayment: number | null;
+  daysUntilCutoff: number | null;
+}
+
+// FIXED: Add static methods interface
+export interface IAccountModel extends Model<IAccount> {
+  getActiveAccounts(): Promise<IAccount[]>;
 }
 
 // MongoDB schema
 const AccountSchema = new Schema<IAccount>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'User ID is required'],
+      index: true
+    },
     name: {
       type: String,
       required: [true, 'Account name is required'],
       trim: true,
       maxlength: [100, 'Name cannot exceed 100 characters'],
-      unique: true
     },
     type: {
       type: String,
@@ -154,6 +181,8 @@ const AccountSchema = new Schema<IAccount>(
   }
 );
 
+AccountSchema.index({ userId: 1, name: 1 }, { unique: true }); // Unique index for user and account name
+
 // Virtual to calculate difference from initial balance
 AccountSchema.virtual('balanceDifference').get(function() {
   return this.currentBalance - this.initialBalance;
@@ -222,7 +251,7 @@ AccountSchema.pre('save', function(next) {
   next();
 });
 
-// Model methods
+// INSTANCE METHODS - These will be available on document instances
 AccountSchema.methods.updateBalance = function(amount: number) {
   this.currentBalance += amount;
   
@@ -297,12 +326,16 @@ AccountSchema.methods.getCreditStatus = function() {
   };
 };
 
-// Static method to get active accounts
+// STATIC METHODS - These will be available on the Model
 AccountSchema.statics.getActiveAccounts = function() {
   return this.find({ isActive: true }).sort({ name: 1 });
 };
 
-// Create and export the model
-const Account = mongoose.model<IAccount>('Account', AccountSchema);
+AccountSchema.statics.getActiveAccountsForUser = function(userId: string) {
+  return this.find({ userId, isActive: true }).sort({ name: 1 });
+}
+
+// Create and export the model with proper typing
+const Account = mongoose.model<IAccount, IAccountModel>('Account', AccountSchema);
 
 export default Account;
