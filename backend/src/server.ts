@@ -8,7 +8,8 @@ import mongoose from 'mongoose';
 import accountRoutes from './routes/accounts';
 import transactionRoutes from './routes/transactions';
 import authRoutes from './routes/auths';
-// import categoryRoutes from './routes/categories'; // Si se implementa más adelante
+import categoryRoutes from './routes/categories';
+import recurringTransactionRoutes from './routes/recurringTransactions';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -84,11 +85,12 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// TODO: Agregar rutas de la API
+// TODO: Agregar rutas de la APIrecurringTransactionController
 app.use('/api/accounts', accountRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/auth', authRoutes);
-// app.use('/api/categories', categoryRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/recurring', recurringTransactionRoutes);
 
 // Manejo de errores 404
 app.use('*', (req, res) => {
