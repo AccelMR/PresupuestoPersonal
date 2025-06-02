@@ -21,7 +21,12 @@ const PORT = process.env.PORT || 3001;
 app.use(helmet());
 app.use(morgan('combined'));
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5173'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -85,7 +90,6 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// TODO: Agregar rutas de la APIrecurringTransactionController
 app.use('/api/accounts', accountRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/auth', authRoutes);
