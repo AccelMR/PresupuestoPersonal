@@ -6,7 +6,8 @@ import {
   updateAccount,
   updateAccountBalance,
   deleteAccount,
-  getCreditStatus
+  getCreditStatus,
+  getCreditPaymentCalculation  // New import
 } from '../controllers/accountController';
 import { requireAuth } from '../middleware/auth'; 
 
@@ -34,5 +35,8 @@ router.delete('/:id', deleteAccount);
 
 // GET /api/accounts/:id/credit-status - Get credit status
 router.get('/:id/credit-status', getCreditStatus);
+
+// NEW: GET /api/accounts/:id/payment-calculation - Get payment calculations for credit cards
+router.get('/:id/payment-calculation', getCreditPaymentCalculation);
 
 export default router;

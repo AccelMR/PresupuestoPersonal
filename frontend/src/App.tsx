@@ -1,8 +1,19 @@
+// frontend/src/App.tsx - Refactored with clean components
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import './App.css';
 
-// Types
+// Import our clean components
+import AccountCard from './components/AccountCard';
+import CreditCardInfoComponent from './components/CreditCardInfo';
+import SummaryCard from './components/SummaryCard';
+import Modal from './components/Modal';
+import QuickActions from './components/QuickActions';
+import LoadingSpinner from './components/LoadingSpinner';
+import ErrorMessage from './components/ErrorMessage';
+import AddAccountModal from './components/AddAccountModal';
+
+// Types (keep these the same)
 interface User {
   id: string;
   email: string;
@@ -15,189 +26,15 @@ interface Account {
   type: string;
   currentBalance: number;
   currency: string;
+  creditFields?: {
+    creditLimit?: number;
+    availableCredit?: number;
+    interestRate?: number;
+    daysUntilPayment?: number;
+  };
 }
 
-// Components
-const AddAccountModal: React.FC<{
-  token: string;
-  onClose: () => void;
-  onAccountAdded: () => void;
-}> = ({ token, onClose, onAccountAdded }) => {
-  const [name, setName] = useState('');
-  const [type, setType] = useState('checking');
-  const [initialBalance, setInitialBalance] = useState('');
-  const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const accountTypes = [
-    { value: 'checking', label: '🏦 Cuenta de Cheques' },
-    { value: 'savings', label: '💰 Cuenta de Ahorros' },
-    { value: 'credit_card', label: '💳 Tarjeta de Crédito' },
-    { value: 'cash', label: '💵 Efectivo' },
-    { value: 'investment', label: '📈 Inversiones' }
-  ];
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      const accountData = {
-        name,
-        type,
-        initialBalance: parseFloat(initialBalance) || 0,
-        currency: 'MXN',
-        description: description || undefined
-      };
-
-      const response = await fetch('http://localhost:3001/api/accounts', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(accountData)
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        onAccountAdded();
-      } else {
-        setError(data.message);
-      }
-    } catch (err) {
-      setError('Error creating account');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
-      <div className="card" style={{ width: '500px', maxWidth: '90%', margin: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 style={{ margin: 0 }}>➕ Agregar Nueva Cuenta</h2>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '1.5rem',
-              cursor: 'pointer',
-              color: '#666'
-            }}
-          >
-            ×
-          </button>
-        </div>
-
-        {error && (
-          <div style={{ background: '#ffebee', color: '#c62828', padding: '0.5rem', borderRadius: '4px', marginBottom: '1rem' }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-              Nombre de la Cuenta:
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="ej. Bancomer Principal"
-              required
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-              Tipo de Cuenta:
-            </label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-            >
-              {accountTypes.map((accountType) => (
-                <option key={accountType.value} value={accountType.value}>
-                  {accountType.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-              Balance Inicial:
-            </label>
-            <input
-              type="number"
-              value={initialBalance}
-              onChange={(e) => setInitialBalance(e.target.value)}
-              placeholder="0"
-              step="0.01"
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-            />
-            <small style={{ color: '#666' }}>
-              Para tarjetas de crédito, usa valores negativos si tienes deuda
-            </small>
-          </div>
-
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-              Descripción (opcional):
-            </label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="ej. Cuenta principal para gastos"
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button
-              type="submit"
-              className="btn"
-              disabled={loading}
-              style={{ flex: 1 }}
-            >
-              {loading ? 'Creando...' : 'Crear Cuenta'}
-            </button>
-            <button
-              type="button"
-              className="btn-secondary btn"
-              onClick={onClose}
-              disabled={loading}
-              style={{ flex: 1 }}
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
+// Login Component (unchanged - keep as is)
 const Login: React.FC<{ onLogin: (token: string, user: User) => void }> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -244,13 +81,9 @@ const Login: React.FC<{ onLogin: (token: string, user: User) => void }> = ({ onL
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
       <div className="card" style={{ width: '400px', maxWidth: '90%' }}>
         <h1 style={{color:'#c62828'}}>💰 Finanzas Personales</h1>
-        <h2>{isRegistering ? 'Crear Cuenta' : 'Iniciar Sesión'}</h2>
+        <h2 style={{ color:'#c62828' }}>{isRegistering ? 'Crear Cuenta' : 'Iniciar Sesión'}</h2>
         
-        {error && (
-          <div style={{ background: '#ffebee', color: '#c62828', padding: '0.5rem', borderRadius: '4px', marginBottom: '1rem' }}>
-            {error}
-          </div>
-        )}
+        {error && <ErrorMessage message={error} />}
 
         <form onSubmit={handleSubmit}>
           {isRegistering && (
@@ -267,7 +100,7 @@ const Login: React.FC<{ onLogin: (token: string, user: User) => void }> = ({ onL
           )}
           
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem' }}>Email:</label>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color:'#333' }}>Email:</label>
             <input
               type="email"
               value={email}
@@ -278,7 +111,7 @@ const Login: React.FC<{ onLogin: (token: string, user: User) => void }> = ({ onL
           </div>
 
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem' }}>Contraseña:</label>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Contraseña:</label>
             <input
               type="password"
               value={password}
@@ -306,11 +139,28 @@ const Login: React.FC<{ onLogin: (token: string, user: User) => void }> = ({ onL
   );
 };
 
+// Header Component (extracted for cleanliness)
+const Header: React.FC<{ user: User; onLogout: () => void }> = ({ user, onLogout }) => (
+  <header style={{ background: 'white', padding: '1rem 0', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+    <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <h1 style={{ margin: 0, color:"#c62828" }}>💰 Finanzas Personales</h1>
+      <div>
+        <span style={{ marginRight: '1rem',  color:"#c62828" }}>Hola, {user.name}</span>
+        <button className="btn-secondary btn" onClick={onLogout}>
+          Cerrar Sesión
+        </button>
+      </div>
+    </div>
+  </header>
+);
+
+// Dashboard Component (heavily refactored but same functionality)
 const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> = ({ user, token, onLogout }) => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddAccount, setShowAddAccount] = useState(false);
+  const [selectedCreditCard, setSelectedCreditCard] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAccounts();
@@ -318,6 +168,8 @@ const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> =
 
   const fetchAccounts = async () => {
     try {
+      setLoading(true);
+      setError('');
       const response = await fetch('http://localhost:3001/api/accounts', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -338,25 +190,60 @@ const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> =
     }
   };
 
-  const totalBalance = accounts.reduce((sum, account) => sum + account.currentBalance, 0);
+  // Calculate summary data (like processing data in C++)
+  const summaryData = React.useMemo(() => {
+    const totalBalance = accounts.reduce((sum, account) => sum + account.currentBalance, 0);
+    const creditCards = accounts.filter(acc => acc.type === 'credit_card');
+    const totalDebt = creditCards.reduce((sum, card) => sum + Math.abs(Math.min(0, card.currentBalance)), 0);
+    
+    return {
+      totalBalance,
+      totalAccounts: accounts.length,
+      totalDebt,
+      creditCards: creditCards.length
+    };
+  }, [accounts]);
+
+  // Quick actions configuration (like function pointer array in C++)
+  const quickActions = [
+    {
+      label: 'Agregar Gasto',
+      icon: '📝',
+      onClick: () => console.log('Add expense'), // TODO: Implement
+      color: '#f44336'
+    },
+    {
+      label: 'Agregar Ingreso', 
+      icon: '💰',
+      onClick: () => console.log('Add income'), // TODO: Implement
+      color: '#4caf50'
+    },
+    {
+      label: 'Transferencia',
+      icon: '🔄', 
+      onClick: () => console.log('Transfer'), // TODO: Implement
+      color: '#2196f3'
+    },
+    {
+      label: 'Ver Reportes',
+      icon: '📊',
+      onClick: () => console.log('Reports'), // TODO: Implement  
+      color: '#9c27b0'
+    }
+  ];
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
       {/* Header */}
-      <header style={{ background: 'white', padding: '1rem 0', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-        <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1 style={{ margin: 0, color:"#c62828" }}>💰 Finanzas Personales</h1>
-          <div>
-            <span style={{ marginRight: '1rem',  color:"#c62828" }}>Hola, {user.name}</span>
-            <button className="btn-secondary btn" onClick={onLogout}>
-              Cerrar Sesión
-            </button>
-          </div>
-        </div>
-      </header>
+      <Header user={user} onLogout={onLogout} />
 
-      {/* Add Account Modal */}
-      {showAddAccount && (
+      {/* Modals */}
+      <Modal 
+        isOpen={showAddAccount}
+        onClose={() => setShowAddAccount(false)}
+        title="➕ Agregar Nueva Cuenta"
+        maxWidth="700px"
+      >
         <AddAccountModal
           token={token}
           onClose={() => setShowAddAccount(false)}
@@ -365,110 +252,103 @@ const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> =
             setShowAddAccount(false);
           }}
         />
+      </Modal>
+
+      {/* Credit Card Info Modal */}
+      {selectedCreditCard && (
+        <CreditCardInfoComponent
+          accountId={selectedCreditCard}
+          token={token}
+          onClose={() => setSelectedCreditCard(null)}
+        />
       )}
 
       {/* Main Content */}
       <main className="container" style={{ paddingTop: '2rem' }}>
-        {/* Summary Cards */}
+        {/* Summary Cards - Now using reusable component */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-          <div className="card">
-            <h3 style={{ margin: '0 0 0.5rem 0', color: '#666' }}>Balance Total</h3>
-            <p style={{ fontSize: '2rem', fontWeight: 'bold', margin: 0, color: totalBalance >= 0 ? '#4caf50' : '#f44336' }}>
-              ${totalBalance.toLocaleString('es-MX')}
-            </p>
-          </div>
+          <SummaryCard
+            title="Balance Total"
+            value={`$${summaryData.totalBalance.toLocaleString('es-MX')}`}
+            color={summaryData.totalBalance >= 0 ? '#4caf50' : '#f44336'}
+            icon="💰"
+          />
           
-          <div className="card">
-            <h3 style={{ margin: '0 0 0.5rem 0', color: '#666' }}>Cuentas Activas</h3>
-            <p style={{ fontSize: '2rem', fontWeight: 'bold', margin: 0, color:"#c62828" }}>
-              {accounts.length}
-            </p>
-          </div>
+          <SummaryCard
+            title="Cuentas Activas"
+            value={summaryData.totalAccounts}
+            color="#c62828"
+            icon="🏦"
+          />
           
-          <div className="card">
-            <h3 style={{ margin: '0 0 0.5rem 0', color: '#666' }}>Este Mes</h3>
-            <p style={{ fontSize: '1.2rem', margin: 0, color: '#666' }}>
-              Próximamente
-            </p>
-          </div>
+          <SummaryCard
+            title="Tarjetas de Crédito"
+            value={summaryData.creditCards}
+            color="#2196f3"
+            icon="💳"
+            subtitle={summaryData.totalDebt > 0 ? `Deuda: $${summaryData.totalDebt.toLocaleString('es-MX')}` : 'Sin deuda'}
+          />
+          
+          <SummaryCard
+            title="Este Mes"
+            value="Próximamente"
+            color="#666"
+            icon="📅"
+          />
         </div>
 
         {/* Accounts List */}
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <h2 style={{ margin: 0, color:"#c62828" }}>Mis Cuentas</h2>
-            <button className="btn" onClick={() => setShowAddAccount(true)}>+ Agregar Cuenta</button>
+            <button className="btn" onClick={() => setShowAddAccount(true)}>
+              + Agregar Cuenta
+            </button>
           </div>
 
           {loading ? (
-            <p>Cargando cuentas...</p>
+            <LoadingSpinner message="Cargando cuentas..." />
           ) : error ? (
-            <div style={{ background: '#ffebee', color: '#c62828', padding: '1rem', borderRadius: '4px' }}>
-              {error}
-            </div>
+            <ErrorMessage 
+              message={error} 
+              onRetry={fetchAccounts}
+              title="Error al cargar cuentas"
+            />
           ) : accounts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-              <p>No tienes cuentas registradas</p>
-              <button className="btn" onClick={() => setShowAddAccount(true)}>Crear tu primera cuenta</button>
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+              <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🏦</div>
+              <h3 style={{ margin: '0 0 1rem 0' }}>No tienes cuentas registradas</h3>
+              <p style={{ marginBottom: '2rem' }}>Comienza creando tu primera cuenta para manejar tus finanzas</p>
+              <button className="btn" onClick={() => setShowAddAccount(true)}>
+                Crear tu primera cuenta
+              </button>
             </div>
           ) : (
-            <div style={{ display: 'grid', gap: '1rem', color:"#c62828" }}>
+            <div style={{ display: 'grid', gap: '1rem' }}>
               {accounts.map((account) => (
-                <div key={account._id} style={{ 
-                  border: '1px solid #ddd', 
-                  borderRadius: '8px', 
-                  padding: '1rem',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <div>
-                    <h4 style={{ margin: '0 0 0.5rem 0' }}>{account.name}</h4>
-                    <p style={{ margin: 0, color: '#666', textTransform: 'capitalize' }}>
-                      {account.type.replace('_', ' ')}
-                    </p>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ 
-                      margin: 0, 
-                      fontSize: '1.2rem', 
-                      fontWeight: 'bold',
-                      color: account.currentBalance >= 0 ? '#4caf50' : '#f44336'
-                    }}>
-                      ${account.currentBalance.toLocaleString('es-MX')}
-                    </p>
-                    <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
-                      {account.currency}
-                    </p>
-                  </div>
-                </div>
+                <AccountCard
+                  key={account._id}
+                  account={account}
+                  onCreditCardClick={setSelectedCreditCard}
+                />
               ))}
             </div>
           )}
         </div>
 
-        {/* Quick Actions */}
-        <div className="card">
-          <h2 style={{ color:"#c62828" }}>Acciones Rápidas</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-            <button className="btn">📝 Agregar Gasto</button>
-            <button className="btn">💰 Agregar Ingreso</button>
-            <button className="btn">🔄 Transferencia</button>
-            <button className="btn">📊 Ver Reportes</button>
-          </div>
-        </div>
+        {/* Quick Actions - Now using reusable component */}
+        <QuickActions actions={quickActions} />
       </main>
     </div>
   );
 };
 
-// Main App Component
+// Main App Component (unchanged)
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check for stored auth data
     const storedToken = localStorage.getItem('auth_token');
     const storedUser = localStorage.getItem('auth_user');
     
