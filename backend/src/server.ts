@@ -10,6 +10,7 @@ import transactionRoutes from './routes/transactions';
 import authRoutes from './routes/auths';
 import categoryRoutes from './routes/categories';
 import recurringTransactionRoutes from './routes/recurringTransactions';
+import customBalanceRoutes from './routes/customBalances';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -95,6 +96,7 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/recurring', recurringTransactionRoutes);
+app.use('/api/custom-balance', customBalanceRoutes);
 
 // Manejo de errores 404
 app.use('*', (req, res) => {

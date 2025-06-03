@@ -13,6 +13,17 @@ import LoadingSpinner from './components/LoadingSpinner';
 import ErrorMessage from './components/ErrorMessage';
 import AddAccountModal from './components/AddAccountModal';
 
+export enum AccountType {
+  CHECKING = 'checking',    // Checking account
+  SAVINGS = 'savings',      // Savings account
+  CREDIT_CARD = 'credit_card',     // Credit card
+  AUTO_LOAN = 'auto_loan',         // Auto loan
+  PERSONAL_LOAN = 'personal_loan', // Personal loan
+  MORTGAGE = 'mortgage',           // Mortgage
+  CASH = 'cash',                   // Cash
+  INVESTMENT = 'investment'        // Investments
+}
+
 // Types (keep these the same)
 interface User {
   id: string;
@@ -192,7 +203,18 @@ const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> =
 
   // Calculate summary data (like processing data in C++)
   const summaryData = React.useMemo(() => {
-    const totalBalance = accounts.reduce((sum, account) => sum + account.currentBalance, 0);
+    //const totalBalance = accounts.reduce((sum, account) => sum + account.currentBalance, 0);
+
+    let totalBalance = 0;
+    accounts.forEach(account => {
+      if (account.type !== AccountType.CREDIT_CARD && 
+          account.type !== AccountType.SAVINGS
+      )
+      {
+        totalBalance += account.currentBalance;
+      }
+    });
+
     const creditCards = accounts.filter(acc => acc.type === 'credit_card');
     const totalDebt = creditCards.reduce((sum, card) => sum + Math.abs(Math.min(0, card.currentBalance)), 0);
     
