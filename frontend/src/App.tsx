@@ -12,7 +12,8 @@ import QuickActions from './components/QuickActions';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorMessage from './components/ErrorMessage';
 import AddAccountModal from './components/AddAccountModal';
-import CustomBalanceModal from './components/CustomBalanceModal'; // NEW IMPORT
+import CustomBalanceModal from './components/CustomBalanceModal';
+import TransactionModal from './components/TransactionModal';
 
 export enum AccountType {
   CHECKING = 'checking',
@@ -243,6 +244,7 @@ const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> =
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [showCustomBalanceModal, setShowCustomBalanceModal] = useState(false); // NEW STATE
   const [selectedCreditCard, setSelectedCreditCard] = useState<string | null>(null);
+  const [showTransactionModal, setShowTransactionModal] = useState(false); // NEW STATE
 
   useEffect(() => {
     fetchAccounts();
@@ -322,28 +324,13 @@ const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> =
   // Quick actions configuration (UPDATED)
   const quickActions = [
     {
-      label: 'Agregar Gasto',
-      icon: '📝',
-      onClick: () => console.log('Add expense'),
-      color: '#f44336'
-    },
-    {
-      label: 'Agregar Ingreso',
-      icon: '💰',
-      onClick: () => console.log('Add income'),
-      color: '#4caf50'
-    },
-    {
-      label: 'Transferencia',
-      icon: '🔄',
-      onClick: () => console.log('Transfer'),
+      label: 'Transacción',
+      icon: '➕',
+      onClick: () => {
+        setShowTransactionModal(true);
+        // Could set a state to preselect transfer type
+      },
       color: '#2196f3'
-    },
-    {
-      label: 'Custom Balance',
-      icon: '💼',
-      onClick: () => setShowCustomBalanceModal(true), // NEW ACTION
-      color: '#9c27b0'
     }
   ];
 
@@ -385,6 +372,17 @@ const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> =
         token={token}
       />
 
+      {/* NEW: Transaction Modal */}
+      <TransactionModal
+        isOpen={showTransactionModal}
+        onClose={() => setShowTransactionModal(false)}
+        onTransactionCreated={() => {
+          fetchAccounts(); // Refresh accounts to show updated balances
+          setShowTransactionModal(false);
+        }}
+        token={token}
+      />
+
       {/* Credit Card Info Modal */}
       {selectedCreditCard && (
         <CreditCardInfoComponent
@@ -399,7 +397,7 @@ const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> =
         {/* Summary Cards */}
 
         {/* Custom Balances Section - NEW */}
-        {customBalances.length > 0 && (
+        {(
           <div className="card" style={{ marginBottom: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ margin: 0, color: "#9c27b0" }}>💼 Custom Balances</h2>
