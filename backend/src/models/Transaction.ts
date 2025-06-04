@@ -18,10 +18,6 @@ export enum PaymentMethod {
   DEBIT_CARD = 'debit_card',       // Tarjeta de débito
   CREDIT_CARD = 'credit_card',     // Tarjeta de crédito
   BANK_TRANSFER = 'bank_transfer', // Transferencia bancaria
-  SPEI = 'spei',                   // SPEI (México)
-  OXXO = 'oxxo',                   // Pago en OXXO
-  CHECK = 'check',                 // Cheque
-  PAYPAL = 'paypal',               // PayPal
   OTHER = 'other'                  // Otro
 }
 
@@ -60,7 +56,7 @@ export interface ITransaction extends Document {
   // Mexican financial context
   isRecurring: boolean;        // Is this a recurring transaction?
   recurringConfig?: {
-    frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+    frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'bimonthly' | 'quarterly' | 'semiannually' | 'annually';
     interval: number;          // Every X periods (e.g., every 2 weeks)
     endDate?: Date;           // When recurring ends
     nextDate?: Date;          // Next occurrence

@@ -96,7 +96,7 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/recurring', recurringTransactionRoutes);
-app.use('/api/custom-balance', customBalanceRoutes);
+app.use('/api/custom-balances', customBalanceRoutes);
 
 // Manejo de errores 404
 app.use('*', (req, res) => {
