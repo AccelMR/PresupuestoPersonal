@@ -1,5 +1,6 @@
 // frontend/src/components/AccountCard.tsx
 import React from 'react';
+import { AccountType } from '../App';
 
 interface Account {
   _id: string;
@@ -7,6 +8,7 @@ interface Account {
   type: string;
   currentBalance: number;
   currency: string;
+  description?: string;
   creditFields?: {
     creditLimit?: number;
     availableCredit?: number;
@@ -22,13 +24,15 @@ interface AccountCardProps {
 }
 
 // AccountCard Component - Like a reusable class in C++
-const AccountCard: React.FC<AccountCardProps> = ({ 
-  account, 
-  onCreditCardClick, 
-  onClick 
+const AccountCard: React.FC<AccountCardProps> = ({
+  account,
+  onCreditCardClick,
+  onClick
 }) => {
   const isCreditCard = account.type === 'credit_card';
   const isClickable = isCreditCard && onCreditCardClick;
+  const hasDescription = account.description && account.description.trim() !== '';
+  const bshouldShowDescription = hasDescription && account.type === AccountType.SAVINGS;
 
   const handleClick = () => {
     if (isCreditCard && onCreditCardClick) {
@@ -55,7 +59,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
   const getAccountTypeName = (type: string) => {
     const nameMap: { [key: string]: string } = {
       'checking': 'Cuenta de Cheques',
-      'savings': 'Cuenta de Ahorros', 
+      'savings': 'Cuenta de Ahorros',
       'credit_card': 'Tarjeta de Crédito',
       'cash': 'Efectivo',
       'investment': 'Inversiones',
@@ -67,17 +71,13 @@ const AccountCard: React.FC<AccountCardProps> = ({
   };
 
   return (
-    <div 
-      style={{ 
-        border: '1px solid #ddd', 
-        borderRadius: '8px', 
+    <div
+      style={{
+        border: '1px solid #ddd',
+        borderRadius: '8px',
         padding: '1rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        cursor: isClickable ? 'pointer' : 'default',
-        transition: 'all 0.2s ease',
-        background: 'white'
+        background: 'white',
+        marginBottom: '1rem'
       }}
       onClick={handleClick}
       onMouseEnter={(e) => {
@@ -93,65 +93,85 @@ const AccountCard: React.FC<AccountCardProps> = ({
         }
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{ fontSize: '2rem' }}>
-          {getAccountTypeIcon(account.type)}
-        </div>
-        <div>
-          <h4 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
-            {account.name}
-          </h4>
-          <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
-            {getAccountTypeName(account.type)}
-            {isCreditCard && ' - Click para detalles'}
-          </p>
-          {/* Credit Card Additional Info */}
-          {isCreditCard && account.creditFields && (
-            <div style={{ marginTop: '0.5rem' }}>
-              <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: '#888' }}>
-                <span>Límite: ${account.creditFields.creditLimit?.toLocaleString('es-MX')}</span>
-                <span>Disponible: ${account.creditFields.availableCredit?.toLocaleString('es-MX')}</span>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ fontSize: '2rem' }}>
+            {getAccountTypeIcon(account.type)}
+          </div>
+          <div>
+            <h4 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
+              {account.name}
+            </h4>
+            <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
+              {getAccountTypeName(account.type)}
+              {isCreditCard && ' - Click para detalles'}
+            </p>
+            {/* Credit Card Additional Info */}
+            {isCreditCard && account.creditFields && (
+              <div style={{ marginTop: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: '#888' }}>
+                  <span>Límite: ${account.creditFields.creditLimit?.toLocaleString('es-MX')}</span>
+                  <span>Disponible: ${account.creditFields.availableCredit?.toLocaleString('es-MX')}</span>
+                </div>
               </div>
-            </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'right' }}>
+          <p style={{
+            margin: 0,
+            fontSize: '1.3rem',
+            fontWeight: 'bold',
+            color: account.currentBalance >= 0 ? '#4caf50' : '#f44336'
+          }}>
+            ${account.currentBalance.toLocaleString('es-MX')}
+          </p>
+          <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
+            {account.currency}
+          </p>
+          {/* Warning for high utilization */}
+          {isCreditCard && account.creditFields && account.creditFields.creditLimit && (
+            (() => {
+              const utilization = (Math.abs(Math.min(0, account.currentBalance)) / account.creditFields.creditLimit!) * 100;
+              if (utilization > 70) {
+                return (
+                  <div style={{
+                    marginTop: '0.5rem',
+                    padding: '0.25rem 0.5rem',
+                    background: '#ffebee',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    color: '#c62828',
+                    fontWeight: 'bold'
+                  }}>
+                    ⚠️ Alta utilización ({utilization.toFixed(0)}%)
+                  </div>
+                );
+              }
+              return null;
+            })()
           )}
         </div>
       </div>
-      
-      <div style={{ textAlign: 'right' }}>
-        <p style={{ 
-          margin: 0, 
-          fontSize: '1.3rem', 
-          fontWeight: 'bold',
-          color: account.currentBalance >= 0 ? '#4caf50' : '#f44336'
+      {/* Description at the bottom */}
+      {bshouldShowDescription && (
+        <div style={{
+          marginTop: '0.75rem',
+          fontSize: '0.8rem',
+          color: '#666',
+          maxHeight: '60px',
+          overflowY: 'auto',
+          borderTop: '1px solid #eee',
+          paddingTop: '0.5rem'
         }}>
-          ${account.currentBalance.toLocaleString('es-MX')}
-        </p>
-        <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
-          {account.currency}
-        </p>
-        {/* Warning for high utilization */}
-        {isCreditCard && account.creditFields && account.creditFields.creditLimit && (
-          (() => {
-            const utilization = (Math.abs(Math.min(0, account.currentBalance)) / account.creditFields.creditLimit!) * 100;
-            if (utilization > 70) {
-              return (
-                <div style={{ 
-                  marginTop: '0.5rem', 
-                  padding: '0.25rem 0.5rem',
-                  background: '#ffebee',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  color: '#c62828',
-                  fontWeight: 'bold'
-                }}>
-                  ⚠️ Alta utilización ({utilization.toFixed(0)}%)
-                </div>
-              );
-            }
-            return null;
-          })()
-        )}
-      </div>
+          {account.description}
+        </div>
+      )}
     </div>
   );
 };

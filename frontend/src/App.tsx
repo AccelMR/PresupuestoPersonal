@@ -14,6 +14,7 @@ import ErrorMessage from './components/ErrorMessage';
 import AddAccountModal from './components/AddAccountModal';
 import CustomBalanceModal from './components/CustomBalanceModal';
 import TransactionModal from './components/TransactionModal';
+import CreditCardPaymentCard from './components/CreditCardPaymentCard';
 
 export enum AccountType {
   CHECKING = 'checking',
@@ -436,14 +437,69 @@ const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> =
             color="#c62828"
             icon="🏦"
           /> */}
+          <div style={{ marginBottom: '2rem' }}>
+            {/* Traditional summary cards */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '1rem',
+              marginBottom: '2rem'
+            }}>
+              <SummaryCard
+                title="Tarjetas de Crédito"
+                value={summaryData.creditCards}
+                color="#2196f3"
+                icon="💳"
+                subtitle={summaryData.totalDebt > 0 ? `Deuda: ${summaryData.totalDebt.toLocaleString('es-MX')}` : 'Sin deuda'}
+              />
+            </div>
 
-          <SummaryCard
-            title="Tarjetas de Crédito"
-            value={summaryData.creditCards}
-            color="#2196f3"
-            icon="💳"
-            subtitle={summaryData.totalDebt > 0 ? `Deuda: ${summaryData.totalDebt.toLocaleString('es-MX')}` : 'Sin deuda'}
-          />
+            {/* Credit Card Payment Cards - NEW SECTION */}
+            {(() => {
+              const accountsToFilter: AccountType[] = [
+                AccountType.CREDIT_CARD,
+                AccountType.AUTO_LOAN,
+                AccountType.PERSONAL_LOAN,
+                AccountType.MORTGAGE
+              ];
+
+              const creditCards = accounts.filter(acc =>
+                accountsToFilter.includes(acc.type as AccountType) &&
+                acc.creditFields);
+              //const creditCards = accounts.filter(acc => acc.type === 'credit_card' && acc.creditFields);
+
+              if (creditCards.length === 0) return null;
+
+              return (
+                <div>
+                  <h3 style={{
+                    color: '#1976d2',
+                    marginBottom: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    💳 Credit Card Payments
+                  </h3>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                    gap: '1rem',
+                    marginBottom: '2rem'
+                  }}>
+                    {creditCards.map((creditCard) => (
+                      <CreditCardPaymentCard
+                        key={creditCard._id}
+                        creditCard={creditCard}
+                        onClick={setSelectedCreditCard}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
         </div>
 
         {/* Accounts List */}
