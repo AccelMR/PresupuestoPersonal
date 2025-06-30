@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
+import { getURL } from '../config/api'
 
 // Types - Like struct definitions in C++
 interface Account {
@@ -87,7 +88,7 @@ const CustomBalanceModal: React.FC<CustomBalanceModalProps> = ({
       setFetchingAccounts(true);
       setError('');
       
-      const response = await fetch('http://localhost:3001/api/accounts', {
+      const response = await fetch(getURL.accounts(), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -171,7 +172,7 @@ const CustomBalanceModal: React.FC<CustomBalanceModalProps> = ({
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3001/api/custom-balances', {
+      const response = await fetch(getURL.customBalances(), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

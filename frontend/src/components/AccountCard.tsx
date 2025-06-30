@@ -21,24 +21,31 @@ interface AccountCardProps {
   account: Account;
   onCreditCardClick?: (id: string) => void;
   onClick?: (account: Account) => void;
+  onTransactionClick?: (account: Account) => void;
 }
 
 // AccountCard Component - Like a reusable class in C++
 const AccountCard: React.FC<AccountCardProps> = ({
   account,
   onCreditCardClick,
-  onClick
+  onClick,
+  onTransactionClick
 }) => {
   const isCreditCard = account.type === 'credit_card';
-  const isClickable = isCreditCard && onCreditCardClick;
+  const isClickable = true;
   const hasDescription = account.description && account.description.trim() !== '';
   const bshouldShowDescription = hasDescription && account.type === AccountType.SAVINGS;
 
   const handleClick = () => {
+
     if (isCreditCard && onCreditCardClick) {
       onCreditCardClick(account._id);
-    } else if (onClick) {
+    } 
+    else if (onClick) {
       onClick(account);
+    }
+    else if (onTransactionClick) {
+      onTransactionClick(account);
     }
   };
 
@@ -77,7 +84,9 @@ const AccountCard: React.FC<AccountCardProps> = ({
         borderRadius: '8px',
         padding: '1rem',
         background: 'white',
-        marginBottom: '1rem'
+        marginBottom: '1rem',
+        cursor: isClickable ? 'pointer' : 'default',
+
       }}
       onClick={handleClick}
       onMouseEnter={(e) => {
@@ -109,6 +118,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
             <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
               {getAccountTypeName(account.type)}
               {isCreditCard && ' - Click para detalles'}
+              {!isCreditCard && ' - Haz clic para ver transacciones'}
             </p>
             {/* Credit Card Additional Info */}
             {isCreditCard && account.creditFields && (

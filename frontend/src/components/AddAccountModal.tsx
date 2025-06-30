@@ -1,6 +1,8 @@
 // frontend/src/components/AddAccountModal.tsx
 import React, { useState } from 'react';
 
+import { getURL } from '../config/api'
+
 interface AddAccountModalProps {
   token: string;
   onClose: () => void;
@@ -85,7 +87,7 @@ const AddAccountModal: React.FC<AddAccountModalProps> = ({ token, onClose, onAcc
 
       console.log('🚀 Sending account data:', accountData);
 
-      const response = await fetch('http://localhost:3001/api/accounts', {
+      const response = await fetch(getURL.accounts(), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

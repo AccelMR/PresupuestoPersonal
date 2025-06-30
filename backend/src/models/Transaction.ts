@@ -43,6 +43,16 @@ export interface ITransaction extends Document {
   // Account relationship
   accountId: mongoose.Types.ObjectId | IAccount;  // Main account
   transferToAccountId?: mongoose.Types.ObjectId | IAccount;  // For transfers
+
+  dueDate?: Date;
+  recurringTransactionId?: mongoose.Types.ObjectId;
+  paymentOptions?: {
+    creditCardId?: mongoose.Types.ObjectId; // For credit card payments
+    paymentType?: 'minimum' | 'no_interest' | 'custom'; // Payment strategy
+    originalMinimumAmount?: number; // Calculated minimum
+    noInterestAmount?: number; // Amount to avoid interest
+    customAmount?: number; // User-defined amount
+  };
   
   // Date info
   transactionDate: Date;       // When it actually happened
@@ -211,6 +221,26 @@ const TransactionSchema = new Schema<ITransaction>(
         min: 0,
         max: 100
       },
+      dueDate: {
+  type: Date
+  },
+  recurringTransactionId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Transaction'
+  },
+  paymentOptions: {
+    creditCardId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Account'
+    },
+    paymentType: {
+      type: String,
+      enum: ['minimum', 'no_interest', 'custom']
+    },
+    originalMinimumAmount: { type: Number },
+    noInterestAmount: { type: Number },
+    customAmount: { type: Number }
+  },
       cutoffPeriod: String
     },
     
@@ -302,15 +332,20 @@ TransactionSchema.methods.applyToAccount = async function() {
     throw new Error('Account not found');
   }
   
-  // Apply transaction to account balance
-  await account.updateBalance(this.amount);
-  
-  // If it's a transfer, also update the target account
-  if (this.type === TransactionType.TRANSFER && this.transferToAccountId) {
-    const targetAccount = await Account.findById(this.transferToAccountId);
-    if (targetAccount) {
-      await targetAccount.updateBalance(-this.amount);
+  // For transfers: FROM account should LOSE money (negative)
+  // For other transactions: use amount as-is
+  if (this.type === TransactionType.TRANSFER) {
+    await account.updateBalance(-Math.abs(this.amount));  // ✅ FROM: Always subtract
+    
+    if (this.transferToAccountId) {
+      const targetAccount = await Account.findById(this.transferToAccountId);
+      if (targetAccount) {
+        await targetAccount.updateBalance(Math.abs(this.amount));  // ✅ TO: Always add
+      }
     }
+  } else {
+    // For non-transfer transactions, use amount as-is
+    await account.updateBalance(this.amount);
   }
 };
 
@@ -397,6 +432,25 @@ TransactionSchema.statics.getMonthlyExpensesForUser = function(year: number, mon
     amount: { $lt: 0 },
     isActive: true
   }).sort({ transactionDate: -1 });
+};
+
+// Remove markAsPaid method from Transaction
+// Add this instead:
+TransactionSchema.statics.createFromPayment = async function(paymentSchedule: any, paidFromAccountId: mongoose.Types.ObjectId) {
+  const transaction = new this({
+    userId: paymentSchedule.userId,
+    description: paymentSchedule.description,
+    amount: -paymentSchedule.currentAmount, // negative for expense
+    type: 'payment',
+    paymentMethod: 'bank_transfer',
+    accountId: paidFromAccountId,
+    transactionDate: new Date(),
+    notes: `Payment for: ${paymentSchedule.description}`
+  });
+  
+  await transaction.save();
+  await transaction.applyToAccount();
+  return transaction;
 };
 
 // Create and export the model

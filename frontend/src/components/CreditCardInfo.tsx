@@ -1,6 +1,8 @@
 // frontend/src/components/CreditCardInfo.tsx
 import React, { useState, useEffect } from 'react';
 
+import { getURL } from '../config/api'
+
 interface CreditCardInfo {
   name: string;
   currentBalance: number;
@@ -46,7 +48,7 @@ const CreditCardInfoComponent: React.FC<CreditCardInfoProps> = ({ accountId, tok
     try {
       setLoading(true);
       const response = await fetch(
-        `http://localhost:3001/api/accounts/${accountId}/payment-calculation?targetPayoffMonths=${customMonths}`,
+        getURL.paymentCalculation(accountId) + `?targetPayoffMonths=${customMonths}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,

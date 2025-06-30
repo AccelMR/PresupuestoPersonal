@@ -4,6 +4,8 @@ import Modal from './Modal';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
 
+import { getURL } from '../config/api'
+
 // Types - Like struct definitions in C++
 interface Account {
   _id: string;
@@ -131,7 +133,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
   const fetchAccounts = async () => {
     try {
       setFetchingData(true);
-      const response = await fetch('http://localhost:3001/api/accounts', {
+      const response = await fetch( getURL.accounts(), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -154,7 +156,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/categories', {
+      const response = await fetch( getURL.categories(), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -259,7 +261,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
       console.log('🚀 Sending transaction data:', transactionData);
 
-      const response = await fetch('http://localhost:3001/api/transactions', {
+      const response = await fetch( getURL.transactions(), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

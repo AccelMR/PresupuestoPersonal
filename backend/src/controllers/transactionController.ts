@@ -177,7 +177,7 @@ export const createTransaction = async (req: Request, res: Response) => {
       });
     }
 
-    // Create transaction data
+    // Creates transaction object
     const transactionData: Partial<ITransaction> = {
       userId,  // Always assign to current user
       description,
@@ -320,7 +320,15 @@ export const getTransactionsByAccount = async (req: Request, res: Response) => {
 
     const skip = (Number(page) - 1) * Number(limit);
     
-    const transactions = await Transaction.find({ accountId, userId, isActive: true })
+    const transactions = await Transaction.find({
+      $or: [
+        { accountId, userId, isActive: true },
+        { transferToAccountId: accountId, userId, isActive: true }
+      ]
+    })
+      .populate('accountId', 'name type')
+      .populate('transferToAccountId', 'name type')  // ← AGREGAR ESTA LÍNEA
+      .populate('categoryId', 'name color')
       .sort({ transactionDate: -1 })
       .limit(Number(limit))
       .skip(skip);

@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import './App.css';
 
+import { getURL } from './config/api';
+
 // Import components
 import AccountCard from './components/AccountCard';
 import CreditCardInfoComponent from './components/CreditCardInfo';
@@ -15,6 +17,7 @@ import AddAccountModal from './components/AddAccountModal';
 import CustomBalanceModal from './components/CustomBalanceModal';
 import TransactionModal from './components/TransactionModal';
 import CreditCardPaymentCard from './components/CreditCardPaymentCard';
+import TransactionListModal from './components/TransactionListModal';
 
 export enum AccountType {
   CHECKING = 'checking',
@@ -238,25 +241,27 @@ const CustomBalanceCard: React.FC<{ customBalance: CustomBalance }> = ({ customB
 // Dashboard Component (updated)
 const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> = ({ user, token, onLogout }) => {
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [customBalances, setCustomBalances] = useState<CustomBalance[]>([]); // NEW STATE
+  const [customBalances, setCustomBalances] = useState<CustomBalance[]>([]); 
   const [loading, setLoading] = useState(true);
-  const [customBalancesLoading, setCustomBalancesLoading] = useState(false); // NEW STATE
+  const [customBalancesLoading, setCustomBalancesLoading] = useState(false); 
   const [error, setError] = useState('');
   const [showAddAccount, setShowAddAccount] = useState(false);
-  const [showCustomBalanceModal, setShowCustomBalanceModal] = useState(false); // NEW STATE
+  const [showCustomBalanceModal, setShowCustomBalanceModal] = useState(false); 
   const [selectedCreditCard, setSelectedCreditCard] = useState<string | null>(null);
-  const [showTransactionModal, setShowTransactionModal] = useState(false); // NEW STATE
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [showTransactionListModal, setShowTransactionListModal] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
 
   useEffect(() => {
     fetchAccounts();
-    fetchCustomBalances(); // NEW FETCH
+    fetchCustomBalances();
   }, []);
 
   const fetchAccounts = async () => {
     try {
       setLoading(true);
       setError('');
-      const response = await fetch('http://localhost:3001/api/accounts', {
+      const response = await fetch(getURL.accounts(), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -266,12 +271,15 @@ const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> =
       const data = await response.json();
       if (data.success) {
         setAccounts(data.data);
-      } else {
+      } 
+      else {
         setError(data.message);
       }
-    } catch (err) {
+    } 
+    catch (err) {
       setError('Error fetching accounts');
-    } finally {
+    } 
+    finally {
       setLoading(false);
     }
   };
@@ -280,7 +288,7 @@ const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> =
   const fetchCustomBalances = async () => {
     try {
       setCustomBalancesLoading(true);
-      const response = await fetch('http://localhost:3001/api/custom-balances', {
+      const response = await fetch(getURL.customBalances(), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -378,7 +386,7 @@ const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> =
         isOpen={showTransactionModal}
         onClose={() => setShowTransactionModal(false)}
         onTransactionCreated={() => {
-          fetchAccounts(); // Refresh accounts to show updated balances
+          fetchAccounts();
           setShowTransactionModal(false);
         }}
         token={token}
@@ -393,11 +401,22 @@ const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> =
         />
       )}
 
+      {/* NEW: Transaction List Modal */}
+      <TransactionListModal
+        isOpen={showTransactionListModal} 
+        onClose={() => {
+          setShowTransactionListModal(false); 
+          setSelectedAccount(null);
+        }}
+        account={selectedAccount}
+        token={token}
+      />
+
       {/* Main Content */}
       <main className="container" style={{ paddingTop: '2rem' }}>
         {/* Summary Cards */}
 
-        {/* Custom Balances Section - NEW */}
+        {/* Custom Balances Section */}
         {(
           <div className="card" style={{ marginBottom: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -531,10 +550,14 @@ const Dashboard: React.FC<{ user: User; token: string; onLogout: () => void }> =
           ) : (
             <div style={{ display: 'grid', gap: '1rem' }}>
               {accounts.map((account) => (
-                <AccountCard
+                                <AccountCard
                   key={account._id}
                   account={account}
-                  onCreditCardClick={setSelectedCreditCard}
+                  //onCreditCardClick={setSelectedCreditCard} // Credit Card pop up, not being used now
+                  onTransactionClick={(account) => {
+                    setSelectedAccount(account);
+                    setShowTransactionListModal(true);
+                  }}
                 />
               ))}
             </div>
